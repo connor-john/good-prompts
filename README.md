@@ -1,4 +1,4 @@
-# Prompts
+# Good Prompts
 
 Example prompts I have encountered or created that are good.
 
@@ -6,6 +6,7 @@ Example prompts I have encountered or created that are good.
 
 - [Answer Questions Against a CSV]()
 - [Answer Questions Against a SQL Database]()
+- [Answer Questions Against a Database with Functions]()
 
 ### Answer Questions Against a CSV
 
@@ -136,6 +137,148 @@ SELECT [death] FROM covidtracking WHERE state = 'TX' AND date LIKE '2020%'"
 QUESTION = """How may patients were hospitalized during October 2020
 in New York, and nationwide as the total of all states?
 Use the hospitalizedIncrease column
+"""
+```
+
+[Source](https://www.deeplearning.ai/short-courses/building-your-own-database-agent/)
+
+### Answer Questions Against a Database with Functions
+
+An example of how to call functions for Agents and how best to format responses and the functions themselves
+
+**Functions**
+
+```py
+def get_hospitalized_increase_for_state_on_date(state_abbr, specific_date):
+    try:
+        query = f"""
+        SELECT date, hospitalizedIncrease
+        FROM all_states_history
+        WHERE state = '{state_abbr}' AND date = '{specific_date}';
+        """
+        query = text(query)
+
+        with engine.connect() as connection:
+            result = pd.read_sql_query(query, connection)
+        if not result.empty:
+            return result.to_dict('records')[0]
+        else:
+            return np.nan
+    except Exception as e:
+        print(e)
+        return np.nan
+
+def get_positive_cases_for_state_on_date(state_abbr, specific_date):
+    try:
+        query = f"""
+        SELECT date, state, positiveIncrease AS positive_cases
+        FROM all_states_history
+        WHERE state = '{state_abbr}' AND date = '{specific_date}';
+        """
+        query = text(query)
+
+        with engine.connect() as connection:
+            result = pd.read_sql_query(query, connection)
+        if not result.empty:
+            return result.to_dict('records')[0]
+        else:
+            return np.nan
+    except Exception as e:
+        print(e)
+        return np.nan
+```
+
+**Tools / Functions**
+
+```py
+tools_sql = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_hospitalized_increase_for_state_on_date",
+            "description": """Retrieves the daily increase in
+                              hospitalizations for a specific state
+                              on a specific date.""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "state_abbr": {
+                        "type": "string",
+                        "description": """The abbreviation of the state
+                                          (e.g., 'NY', 'CA')."""
+                    },
+                    "specific_date": {
+                        "type": "string",
+                        "description": """The specific date for
+                                          the query in 'YYYY-MM-DD'
+                                          format."""
+                    }
+                },
+                "required": ["state_abbr", "specific_date"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_positive_cases_for_state_on_date",
+            "description": """Retrieves the daily increase in
+                              positive cases for a specific state
+                              on a specific date.""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "state_abbr": {
+                        "type": "string",
+                        "description": """The abbreviation of the
+                                          state (e.g., 'NY', 'CA')."""
+                    },
+                    "specific_date": {
+                        "type": "string",
+                        "description": """The specific date for the
+                                          query in 'YYYY-MM-DD'
+                                          format."""
+                    }
+                },
+                "required": ["state_abbr", "specific_date"]
+            }
+        }
+    }
+]
+```
+
+**Handler Function**
+
+```py
+available_functions = {
+    "get_positive_cases_for_state_on_date": get_positive_cases_for_state_on_date,
+    "get_hospitalized_increase_for_state_on_date":get_hospitalized_increase_for_state_on_date
+    }
+messages.append(response_message)
+
+for tool_call in tool_calls:
+    function_name = tool_call.function.name
+    function_to_call = available_functions[function_name]
+    function_args = json.loads(tool_call.function.arguments)
+    function_response = function_to_call(
+        state_abbr=function_args.get("state_abbr"),
+        specific_date=function_args.get("specific_date"),
+    )
+    messages.append(
+        {
+            "tool_call_id": tool_call.id,
+            "role": "tool",
+            "name": function_name,
+            "content": str(function_response),
+        }
+    )
+```
+
+**Prompt**
+
+```py
+QUESTION = """
+how many hospitalized people we had in Alaska the 2021-03-05?
 """
 ```
 
