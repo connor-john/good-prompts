@@ -283,3 +283,185 @@ how many hospitalized people we had in Alaska the 2021-03-05?
 ```
 
 [Source](https://www.deeplearning.ai/short-courses/building-your-own-database-agent/)
+
+### Transform Unstructured Text into Desired JSON Structure
+
+Used to generate a custom JSON schema of architecural diagrams.
+
+**Prompt**
+
+```py
+INPUT = """
+This is an AWS-based data analytics pipeline for a retail company. The system integrates data from multiple sources, processes it, and stores it in a data warehouse for analysis. Here are the key components and their interactions:
+
+Data Sources:
+1. Internal PostgreSQL database containing customer information
+2. External API providing real-time inventory data from suppliers
+3. Daily sales reports in CSV format stored in an S3 bucket
+
+AWS Components:
+1. AWS Step Functions: Orchestrates the entire data pipeline
+2. AWS Lambda functions: 
+   - Lambda A: Extracts data from the PostgreSQL database
+   - Lambda B: Calls the external API and processes the response
+   - Lambda C: Processes CSV files from S3
+   - Lambda D: Transforms and combines data from all sources
+   - Lambda E: Loads processed data into Redshift
+3. Amazon S3: Stores raw CSV files and serves as a staging area for processed data
+4. Amazon Redshift: Acts as the central data warehouse
+5. Amazon CloudWatch: Monitors the pipeline and triggers the Step Functions workflow daily
+
+Data Flow:
+1. CloudWatch triggers the Step Functions workflow daily at 1 AM
+2. Step Functions invokes Lambda A, B, and C in parallel to extract data from different sources
+3. Lambda A connects to the PostgreSQL database and extracts customer data
+4. Lambda B calls the external API to fetch inventory data
+5. Lambda C reads and parses the CSV files from S3
+6. Once all extraction Lambdas complete, Step Functions triggers Lambda D
+7. Lambda D combines and transforms the data from all sources
+8. Transformed data is stored temporarily in S3
+9. Step Functions then triggers Lambda E
+10. Lambda E loads the processed data from S3 into Redshift
+11. Upon completion, Step Functions sends a notification about the pipeline status
+
+Access and Reporting:
+- Data analysts access Redshift to run queries and generate reports
+- A Tableau dashboard connects to Redshift for real-time visualizations
+- The IT team has full access to monitor and manage all AWS services
+
+This pipeline ensures that the latest data from all sources is available in the Redshift data warehouse every morning for analysis and reporting.
+"""
+
+PROMPT = f"""
+Generate a JSON representation of a system architecture based on the following description:
+
+{INPUT}
+
+The JSON should strictly adhere to the following structure and guidelines:
+
+1. Groups: Categorize components into logical groups (e.g., cloud providers, data sources, user types).
+2. Components: List all system components with their details.
+3. Connections: Describe how components are connected or interact.
+
+Use the following schema:
+
+{{
+    "groups": [
+        {{
+            "name": "group_name",
+            "type": "group_type" // e.g., "cloud_provider", "data_source", "user_group", etc.
+        }}
+    ],
+    "components": [
+        {{
+            "name": "component_name",
+            "type": "component_type",
+            "group": "group_name",
+            "image": "image_filename.png"
+        }}
+    ],
+    "connections": [
+        {{
+            "from": "component_name1",
+            "to": "component_name2",
+            "label": "connection_description"
+        }}
+    ]
+}}
+
+Image Naming Guidelines:
+1. For specific cloud services, use "[provider]-[service].png" (e.g., "aws-lambda.png", "azure-sql-database.png").
+2. For generic services, use descriptive names (e.g., "database.png", "api.png", "server.png").
+3. For user roles, use "user.png" or specific roles like "admin.png", "analyst.png".
+4. If unsure, use a generic term related to the component type.
+
+Example:
+Given the description: "A web application using AWS. It has a React frontend hosted on S3, an API Gateway connecting to Lambda functions, and a DynamoDB database. CloudFront is used as a CDN."
+
+The JSON output should be:
+
+{{
+    "groups": [
+        {{
+            "name": "AWS",
+            "type": "cloud_provider"
+        }},
+        {{
+            "name": "Frontend",
+            "type": "client_side"
+        }}
+    ],
+    "components": [
+        {{
+            "name": "React App",
+            "type": "frontend_framework",
+            "group": "Frontend",
+            "image": "react.png"
+        }},
+        {{
+            "name": "S3 Bucket",
+            "type": "object_storage",
+            "group": "AWS",
+            "image": "aws-s3.png"
+        }},
+        {{
+            "name": "CloudFront",
+            "type": "cdn",
+            "group": "AWS",
+            "image": "aws-cloudfront.png"
+        }},
+        {{
+            "name": "API Gateway",
+            "type": "api_management",
+            "group": "AWS",
+            "image": "aws-api-gateway.png"
+        }},
+        {{
+            "name": "Lambda",
+            "type": "serverless_function",
+            "group": "AWS",
+            "image": "aws-lambda.png"
+        }},
+        {{
+            "name": "DynamoDB",
+            "type": "nosql_database",
+            "group": "AWS",
+            "image": "aws-dynamodb.png"
+        }}
+    ],
+    "connections": [
+        {{
+            "from": "React App",
+            "to": "CloudFront",
+            "label": "user access"
+        }},
+        {{
+            "from": "CloudFront",
+            "to": "S3 Bucket",
+            "label": "origin"
+        }},
+        {{
+            "from": "React App",
+            "to": "API Gateway",
+            "label": "API calls"
+        }},
+        {{
+            "from": "API Gateway",
+            "to": "Lambda",
+            "label": "triggers"
+        }},
+        {{
+            "from": "Lambda",
+            "to": "DynamoDB",
+            "label": "read/write"
+        }}
+    ]
+}}
+
+Ensure your output is a valid JSON object containing only the requested structure.
+Do not include any explanatory text or markdown formatting.
+"""
+
+```
+
+[Source](https://github.com/connor-john/ai-solution-architect/tree/main)
